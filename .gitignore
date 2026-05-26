@@ -1,0 +1,23 @@
+ Entorno virtual — NUNCA subir al repositorio 
+venv/ 
+env/ 
+.venv/ 
+  
+# Credenciales — NUNCA subir al repositorio 
+.env 
+  
+# Datos descargados 
+data/*.csv 
+data/*.json 
+  
+# Salidas generadas 
+output/ 
+  
+# Archivos de Python 
+__pycache__/ 
+*.pyc 
+*.pyo 
+  
+# Sistema Windows 
+Thumbs.db 
+desktop.ini 
