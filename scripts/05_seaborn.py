@@ -109,14 +109,69 @@ def g8_lineplot_region(df):
     plt.savefig(f'{OUTPUT}/08_lineplot_evolucion_region.png', dpi=150, bbox_inches='tight') 
     print('  08_lineplot_evolucion_region.png') 
     plt.close() 
+
+# ── DESAFÍO 1: Gráfica 9: Violinplot — Distribución por tipo de trabajador ──
+def g9_violin(df):
+    df_2024 = df[df['anio'] == 2024].copy()
+    
+    # "Derretimos" las 4 columnas de tipos de trabajadores en una sola columna categórica
+    df_melted = df_2024.melt(
+        id_vars=['entidad', 'region'], 
+        value_vars=['permanentes_urbanos', 'permanentes_campo', 'eventuales_urbanos', 'eventuales_campo'],
+        var_name='tipo_trabajador', 
+        value_name='cantidad'
+    )
+    
+    # Convertimos la cantidad a miles para que el eje Y sea más legible
+    df_melted['cantidad_k'] = df_melted['cantidad'] / 1e3
+    
+    # Limpiamos los nombres para la gráfica
+    df_melted['tipo_trabajador'] = df_melted['tipo_trabajador'].str.replace('_', '\n').str.title()
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.violinplot(data=df_melted, x='tipo_trabajador', y='cantidad_k', palette='Set2', ax=ax)
+    
+    ax.set_title('Distribución por Tipo de Trabajador — 2024', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Tipo de Trabajador')
+    ax.set_ylabel('Asegurados (miles)')
+    
+    fig.text(0.99, 0.01, FUENTE, ha='right', fontsize=8, color='gray')
+    plt.tight_layout()
+    plt.savefig(f'{OUTPUT}/09_violinplot_tipo_trabajador.png', dpi=150, bbox_inches='tight')
+    print('  09_violinplot_tipo_trabajador.png')
+    plt.close()
+
+# ── DESAFÍO 2: Gráfica 10: Pairplot — Correlación de variables numéricas ──
+def g10_pairplot(df):
+    # Tomamos una muestra aleatoria para no saturar la memoria
+    df_sample = df[['total_asegurados', 'permanentes_urbanos', 'eventuales_urbanos', 'region']].sample(n=1000, random_state=42)
+    
+    # Pairplot crea su propia figura, no usa 'ax'
+    g = sns.pairplot(
+        df_sample, 
+        hue='region', 
+        palette={'Norte':'#1A56DB','Centro':'#16A34A','Sur-Sureste':'#EA580C'}
+    )
+    
+    g.fig.suptitle('Relación entre Variables Numéricas por Región', y=1.02, fontsize=14, fontweight='bold')
+    
+    plt.savefig(f'{OUTPUT}/10_pairplot_variables.png', dpi=150, bbox_inches='tight')
+    print('  10_pairplot_variables.png')
+    plt.close()
   
 if __name__ == '__main__': 
     print('Cargando datos desde MongoDB...') 
     df = obtener_df(filtro_anio=2010) 
     print(f'  DataFrame: {len(df):,} registros') 
+    
     print('Generando visualizaciones con Seaborn...') 
     g5_heatmap(df) 
     g6_boxplot_region(df) 
     g7_barplot_sexo_region(df) 
     g8_lineplot_region(df) 
-    print('\n4 gráficas seaborn guardadas en output/graficas/')
+    
+    print('Generando gráficas de los desafíos...')
+    g9_violin(df)
+    g10_pairplot(df)
+    
+    print('\n6 gráficas seaborn guardadas en output/graficas/')

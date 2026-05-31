@@ -2,13 +2,12 @@
 # Visualizaciones con Matplotlib — datos IMSS desde MongoDB 
   
 import matplotlib.pyplot as plt 
+import pandas as pd  # Importado para el Desafío 1
 import os 
 from dotenv import load_dotenv 
 import importlib
 
 # ── Truco para importar archivos que empiezan con número ──
-# Como ya estamos dentro de la carpeta 'scripts' al ejecutar el archivo, 
-# solo llamamos al nombre del archivo directamente.
 pipelines = importlib.import_module("03_pipelines")
 
 # Extraemos las funciones que necesitamos del módulo cargado
@@ -56,8 +55,10 @@ def g2_evolucion(col):
     fig, ax = plt.subplots(figsize=(14, 5)) 
     ax.plot(x, y, color='#1A56DB', linewidth=2.5, marker='o', markersize=2) 
     ax.fill_between(x, y, alpha=0.1, color='#1A56DB') 
-    # Marcar el impacto del COVID-19 
-    ax.axvline(x='2020-03', color='red', linestyle='--', alpha=0.5, label='COVID-19') 
+    
+    # DESAFÍO 2: Marcar el impacto del COVID-19 con un rectángulo sombreado
+    ax.axvspan('2020-03', '2020-12', color='red', alpha=0.2, label='Impacto COVID-19') 
+    
     ax.legend(fontsize=10) 
     ax.set_title('Evolución Mensual de Trabajadores Asegurados (Nacional)\n2010-2026', 
                  fontsize=14, fontweight='bold') 
@@ -113,6 +114,50 @@ def g4_tipo_trabajador(col):
     plt.savefig(f'{OUTPUT}/04_tipo_trabajador_2024.png', dpi=150, bbox_inches='tight') 
     print('  04_tipo_trabajador_2024.png') 
     plt.close() 
+
+# ── DESAFÍO 1: Gráfica 5: Barras Apiladas (Top 10 Entidades por Sexo) ──
+def g5_barras_apiladas(col):
+    # Primero obtenemos el top 10 general
+    top_10 = list(col.aggregate([
+        { '$match': { 'anio': 2024 } },
+        { '$group': { '_id': '$entidad', 'total': { '$sum': '$total_asegurados' } } },
+        { '$sort': { 'total': -1 } },
+        { '$limit': 10 }
+    ]))
+    top_10_entidades = [d['_id'] for d in top_10]
+
+    # Luego sacamos los datos divididos por sexo solo para esas 10 entidades
+    datos = list(col.aggregate([
+        { '$match': { 'anio': 2024, 'entidad': { '$in': top_10_entidades } } },
+        { '$group': {
+            '_id': { 'entidad': '$entidad', 'sexo': '$sexo' },
+            'total': { '$sum': '$total_asegurados' }
+        }}
+    ]))
+
+    # Preparamos los datos con Pandas para apilarlos fácilmente
+    df = pd.DataFrame([{
+        'entidad': d['_id']['entidad'],
+        'sexo': d['_id']['sexo'],
+        'total': d['total'] / 1e6
+    } for d in datos])
+
+    pivot_df = df.pivot(index='entidad', columns='sexo', values='total').reindex(top_10_entidades)
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    pivot_df.plot(kind='bar', stacked=True, color=['#1A56DB', '#E03C8A'], ax=ax, edgecolor='white')
+
+    ax.set_title('Top 10 Entidades por Sexo — 2024 (Barras Apiladas)', fontsize=14, fontweight='bold')
+    ax.set_ylabel('Millones de asegurados')
+    ax.set_xlabel('Entidad Federativa')
+    plt.xticks(rotation=45, ha='right')
+    ax.legend(title='Sexo')
+    
+    fig.text(0.99, 0.01, FUENTE, ha='right', fontsize=8, color='gray')
+    plt.tight_layout()
+    plt.savefig(f'{OUTPUT}/05_barras_apiladas_sexo_2024.png', dpi=150, bbox_inches='tight')
+    print('  05_barras_apiladas_sexo_2024.png')
+    plt.close()
   
 if __name__ == '__main__': 
     print('Generando visualizaciones con Matplotlib...') 
@@ -121,4 +166,5 @@ if __name__ == '__main__':
     g2_evolucion(col) 
     g3_por_sexo(col) 
     g4_tipo_trabajador(col) 
-    print('\n4 gráficas matplotlib guardadas en output/graficas/')
+    g5_barras_apiladas(col)  # Llamada a la nueva gráfica
+    print('\n5 gráficas matplotlib guardadas en output/graficas/')

@@ -27,7 +27,12 @@ def explorar_dataset(path: str) -> pd.DataFrame:
     print(f'\nEstadísticas del campo TOTAL:') 
     print(df['TOTAL'].describe()) 
     return df 
-
+def reporte_calidad(df):
+    print(f"Total filas: {len(df)}")
+    print(f"% de Nulos:\n{(df.isnull().sum() / len(df)) * 100}")
+    print(f"Valores únicos:\n{df.nunique()}")
+    print(f"Top 5 entidades:\n{df['entidad'].value_counts().head(5)}")
+    
 def limpiar_dataset(df: pd.DataFrame) -> pd.DataFrame: 
     """Limpia y normaliza el dataset del IMSS""" 
     print(f'\nIniciando limpieza de {len(df):,} registros...') 
@@ -92,6 +97,9 @@ def limpiar_dataset(df: pd.DataFrame) -> pd.DataFrame:
     print(f'  Entidades únicas: {df["entidad"].nunique()}') 
     print(f'  Años disponibles: {df["anio"].min()} – {df["anio"].max()}') 
     print(f'  Regiones: {df["region"].value_counts().to_dict()}') 
+    df_filtrado = df[(df['anio'] >= 2015) & (df['anio'] <= 2026)]
+    df_filtrado.to_csv('data/imss_2015_2026.csv', index=False)
+    print(f"Registros 2015-2026: {len(df_filtrado)}")
     return df 
 
 if __name__ == '__main__': 

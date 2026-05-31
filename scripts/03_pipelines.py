@@ -3,6 +3,8 @@
 
 from pymongo import MongoClient 
 from dotenv import load_dotenv 
+import pandas as pd  # Agregado para el Desafío 1
+import sys           # Agregado para el Desafío 2
 import os 
 
 load_dotenv() 
@@ -15,8 +17,8 @@ def conectar_atlas():
     client = MongoClient(os.getenv('MONGO_ATLAS_URI')) 
     return client[os.getenv('MONGO_ATLAS_DB')][os.getenv('COLECCION')] 
 
-# Pipeline 1 — Top entidades por asegurados (año más reciente) 
-def p1_por_entidad(col, anio=2024) -> list: 
+# Pipeline 1 — Top entidades por asegurados 
+def p1_por_entidad(col, anio) -> list: 
     return list(col.aggregate([ 
         { '$match': { 'anio': anio } }, 
         { '$group': { '_id': '$entidad', 'total': { '$sum': '$total_asegurados' } } }, 
@@ -45,8 +47,8 @@ def p3_por_sexo(col) -> list:
         { '$sort': { 'total': -1 } } 
     ])) 
 
-# Pipeline 4 — Tipo de trabajador 2024 
-def p4_tipo_trabajador(col, anio=2024) -> list: 
+# Pipeline 4 — Tipo de trabajador 
+def p4_tipo_trabajador(col, anio) -> list: 
     return list(col.aggregate([ 
         { '$match': { 'anio': anio } }, 
         { '$group': { 
@@ -60,7 +62,7 @@ def p4_tipo_trabajador(col, anio=2024) -> list:
     ])) 
 
 # Pipeline 5 — Por región con masa salarial 
-def p5_por_region(col, anio=2024) -> list: 
+def p5_por_region(col, anio) -> list: 
     return list(col.aggregate([ 
         { '$match': { 'anio': anio } }, 
         { '$group': { 
@@ -71,10 +73,10 @@ def p5_por_region(col, anio=2024) -> list:
         { '$sort': { 'total': -1 } } 
     ])) 
 
-# Pipeline 6 — Top crecimiento 2015 vs 2024 
-def p6_top_crecimiento(col) -> list: 
+# Pipeline 6 — Top crecimiento (2015 vs el año ingresado)
+def p6_top_crecimiento(col, anio) -> list: 
     return list(col.aggregate([ 
-        { '$match': { 'anio': { '$in': [2015, 2024] } } }, 
+        { '$match': { 'anio': { '$in': [2015, anio] } } }, 
         { '$group': { 
             '_id': { 'entidad': '$entidad', 'anio': '$anio' }, 
             'total': { '$sum': '$total_asegurados' } 
@@ -95,23 +97,47 @@ def p6_top_crecimiento(col) -> list:
         { '$limit': 10 } 
     ])) 
 
+# DESAFÍO 1: Pipeline 7 — Salario promedio por trabajador 
+def p7_salario_promedio(col, anio) -> list:
+    return list(col.aggregate([
+        { '$match': { 'anio': anio } },
+        { '$group': { 
+            '_id': '$entidad', 
+            'salario_promedio': { 
+                '$avg': { '$divide': ['$masa_salarial_total', '$total_asegurados'] } 
+            } 
+        }},
+        { '$sort': { 'salario_promedio': -1 } }
+    ]))
+
+
 if __name__ == '__main__': 
-    # Asegúrate de tener tu archivo .env configurado correctamente
+    # DESAFÍO 2: Recibir el año como argumento desde la terminal (por defecto 2024 si no se pone nada)
+    anio_filtro = int(sys.argv[1]) if len(sys.argv) > 1 else 2024
+    
     col = conectar_local() 
+    print(f'\n── Ejecutando pipelines para el año {anio_filtro} ──')
     
     pipelines = { 
-        'P1 — Por entidad (2024)':    p1_por_entidad(col), 
-        'P2 — Evolución temporal':    p2_evolucion_temporal(col), 
-        'P3 — Por sexo':              p3_por_sexo(col), 
-        'P4 — Tipo trabajador (2024)':p4_tipo_trabajador(col), 
-        'P5 — Por región (2024)':     p5_por_region(col), 
-        'P6 — Top crecimiento':       p6_top_crecimiento(col), 
+        f'P1 — Por entidad ({anio_filtro})':    p1_por_entidad(col, anio_filtro), 
+        'P2 — Evolución temporal':              p2_evolucion_temporal(col), 
+        'P3 — Por sexo':                        p3_por_sexo(col), 
+        f'P4 — Tipo trabajador ({anio_filtro})':p4_tipo_trabajador(col, anio_filtro), 
+        f'P5 — Por región ({anio_filtro})':     p5_por_region(col, anio_filtro), 
+        f'P6 — Top crecimiento (2015 vs {anio_filtro})': p6_top_crecimiento(col, anio_filtro), 
     } 
     
     for nombre, datos in pipelines.items(): 
         print(f'\n── {nombre} ({len(datos)} resultados) ──') 
-        # Imprime solo los primeros 3 resultados de cada pipeline para no saturar la consola
+        # Imprime solo los primeros 3 resultados de cada pipeline
         for fila in datos[:3]: 
             print(f'   {fila}') 
+            
+    # Mostrar el Pipeline 7 en formato Pandas DataFrame
+    print(f'\n── P7 — Salario Promedio por Entidad ({anio_filtro}) (Desafío Pandas) ──')
+    datos_p7 = p7_salario_promedio(col, anio_filtro)
+    df_salario = pd.DataFrame(datos_p7)
+    df_salario.rename(columns={'_id': 'Entidad', 'salario_promedio': 'Salario Promedio'}, inplace=True)
+    print(df_salario.head()) # Imprime los primeros 5 resultados como tabla
             
     print('\nPipelines ejecutados correctamente.')

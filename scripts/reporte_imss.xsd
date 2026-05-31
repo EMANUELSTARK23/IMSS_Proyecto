@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-    
     <xs:element name="reporte_imss">
         <xs:complexType>
             <xs:sequence>
-                
                 <xs:element name="metadatos">
                     <xs:complexType>
                         <xs:sequence>
@@ -25,6 +23,17 @@
                                     </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                
+                <xs:element name="resumen_ejecutivo">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="estado_mas_asegurados_2024" type="xs:string"/>
+                            <xs:element name="porcentaje_mujeres_nacional" type="xs:string"/>
+                            <xs:element name="region_mayor_masa_salarial" type="xs:string"/>
+                            <xs:element name="estado_mayor_crecimiento_15_24" type="xs:string"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
@@ -76,9 +85,7 @@
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-                
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
 </xs:schema>
