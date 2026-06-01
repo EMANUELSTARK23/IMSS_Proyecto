@@ -29,6 +29,7 @@ def csv_a_documentos(path: str) -> list:
     """Convierte CSV limpio a lista de documentos MongoDB""" 
     df = pd.read_csv(path, encoding='utf-8') 
     df['periodo'] = pd.to_datetime(df['periodo']) 
+    
     # Convertir columnas numéricas a int nativo de Python 
     cols_int = ['total_asegurados','permanentes_urbanos', 
                 'permanentes_campo','eventuales_urbanos', 
@@ -36,6 +37,7 @@ def csv_a_documentos(path: str) -> list:
     for col in cols_int: 
         if col in df.columns: 
             df[col] = df[col].astype(int) 
+            
     docs = df.to_dict(orient='records') 
     print(f' {len(docs):,} documentos preparados') 
     return docs 
@@ -55,13 +57,14 @@ def cargar_coleccion_upsert(client: MongoClient, db_name: str,
         lote = docs[i:i+LOTE] 
         
         # Crear lista de operaciones UpdateOne usando la clave única solicitada
+        # CORRECCIÓN: Usamos .get() para evitar el KeyError si la columna conservó su nombre original
         operaciones = [
             UpdateOne(
                 {
                     'periodo': d['periodo'], 
                     'entidad': d['entidad'], 
                     'sexo': d['sexo'], 
-                    'sector_1': d['sector_1']
+                    'sector_1': d.get('sector_1', d.get('sector_economico_1'))
                 },
                 {'$set': d},
                 upsert=True
@@ -107,7 +110,7 @@ if __name__ == '__main__':
     ca = conectar(MONGO_ATLAS_URI, 'MongoDB Atlas') 
     cargar_coleccion_upsert(ca, MONGO_ATLAS_DB, COLECCION, docs) 
   
-    # Ejecutar el Desafío 2
+    # Ejecutar el Desafío 2 (Comparación Local vs Atlas)
     verificar_sincronizacion(cl, ca, COLECCION)
 
     cl.close() 
