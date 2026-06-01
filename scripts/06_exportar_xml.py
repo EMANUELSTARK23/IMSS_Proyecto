@@ -41,6 +41,25 @@ def construir_xml(resultados: dict, total_docs: int) -> etree._Element:
         g = etree.SubElement(graficas_el,'grafica') 
         g.set('ruta', png) 
         g.set('nombre', os.path.basename(png)) 
+
+    # ── DESAFÍO 1: Resumen Ejecutivo ───────────────────────
+    resumen = etree.SubElement(raiz, 'resumen_ejecutivo')
+    
+    # Extraemos los datos de los pipelines para el resumen
+    top_estado = resultados['p1'][0]['_id'] if resultados['p1'] else "N/A"
+    
+    mujeres = next((d['total'] for d in resultados['p3'] if d['_id'].lower() == 'mujer'), 0)
+    hombres = next((d['total'] for d in resultados['p3'] if d['_id'].lower() == 'hombre'), 0)
+    total_hm = mujeres + hombres
+    pct_muj = (mujeres / total_hm * 100) if total_hm > 0 else 0
+    
+    top_masa = resultados['p5'][0]['_id'] if resultados['p5'] else "N/A"
+    top_crec = resultados['p6'][0]['_id'] if resultados['p6'] else "N/A"
+
+    etree.SubElement(resumen, 'estado_mas_asegurados_2024').text = str(top_estado)
+    etree.SubElement(resumen, 'porcentaje_mujeres_nacional').text = f"{pct_muj:.1f}%"
+    etree.SubElement(resumen, 'region_mayor_masa_salarial').text = str(top_masa)
+    etree.SubElement(resumen, 'estado_mayor_crecimiento_15_24').text = str(top_crec)
   
     # ── Resultados ───────────────────────────────────────── 
     res_el = etree.SubElement(raiz,'resultados') 
@@ -126,14 +145,19 @@ if __name__ == '__main__':
     total_docs = col.count_documents({}) 
     print(f'Total documentos en MongoDB: {total_docs:,}') 
     print('Ejecutando pipelines...') 
+    
+    # ── LA SOLUCIÓN AL ERROR ESTÁ AQUÍ ──
+    # Le pasamos el año 2024 a las funciones que ahora lo exigen
+    anio_base = 2024
     resultados = { 
-        'p1': p1_por_entidad(col), 
+        'p1': p1_por_entidad(col, anio_base), 
         'p2': p2_evolucion_temporal(col), 
         'p3': p3_por_sexo(col), 
-        'p4': p4_tipo_trabajador(col), 
-        'p5': p5_por_region(col), 
-        'p6': p6_top_crecimiento(col), 
+        'p4': p4_tipo_trabajador(col, anio_base), 
+        'p5': p5_por_region(col, anio_base), 
+        'p6': p6_top_crecimiento(col, anio_base), 
     } 
+    
     print('Construyendo XML...') 
     raiz = construir_xml(resultados, total_docs) 
     os.makedirs('output', exist_ok=True) 
